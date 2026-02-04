@@ -8,7 +8,14 @@ class UserSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = User
-        fields = '__all__'
+        fields = ['id', 'email', 'name', 'team', 'created_at']
+    
+    def validate_email(self, value):
+        """Ensure email is unique when creating or updating"""
+        user_id = self.instance.id if self.instance else None
+        if User.objects.filter(email=value).exclude(id=user_id).exists():
+            raise serializers.ValidationError("A user with this email already exists.")
+        return value
 
 
 class TeamSerializer(serializers.ModelSerializer):
@@ -17,9 +24,10 @@ class TeamSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Team
-        fields = '__all__'
+        fields = ['id', 'name', 'description', 'created_at', 'member_count']
     
     def get_member_count(self, obj):
+        """Calculate the number of users assigned to this team"""
         return User.objects.filter(team=obj.name).count()
 
 
@@ -28,7 +36,7 @@ class ActivitySerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Activity
-        fields = '__all__'
+        fields = ['id', 'user_email', 'activity_type', 'duration', 'distance', 'calories', 'date', 'created_at']
 
 
 class LeaderboardSerializer(serializers.ModelSerializer):
@@ -36,7 +44,7 @@ class LeaderboardSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Leaderboard
-        fields = '__all__'
+        fields = ['id', 'user_email', 'user_name', 'team', 'total_calories', 'total_activities', 'rank', 'updated_at']
 
 
 class WorkoutSerializer(serializers.ModelSerializer):
@@ -44,4 +52,4 @@ class WorkoutSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Workout
-        fields = '__all__'
+        fields = ['id', 'name', 'description', 'activity_type', 'duration', 'difficulty', 'calories_estimate', 'created_at']
