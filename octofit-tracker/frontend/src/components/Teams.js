@@ -1,24 +1,42 @@
-import React, { useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useFetch } from '../hooks/useFetch';
-import { teamService } from '../services/team.service';
-import LoadingSpinner from './common/LoadingSpinner';
-import ErrorAlert from './common/ErrorAlert';
-import EmptyState from './common/EmptyState';
 
 const Teams = () => {
   const { t } = useTranslation();
+  const [teams, setTeams] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Fetch teams using custom hook
-  const { 
-    data: teams, 
-    loading, 
-    error, 
-    refetch 
-  } = useFetch(teamService.getAll, []);
+  useEffect(() => {
+    const apiUrl = `https://${process.env.REACT_APP_CODESPACE_NAME}-8000.app.github.dev/api/teams/`;
+    console.log('Teams Component - Fetching from:', apiUrl);
+    console.log('Teams Component - REACT_APP_CODESPACE_NAME:', process.env.REACT_APP_CODESPACE_NAME);
+
+    fetch(apiUrl)
+      .then(response => {
+        console.log('Teams Component - Response status:', response.status);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+      })
+      .then(data => {
+        console.log('Teams Component - Fetched data:', data);
+        // Handle both paginated (.results) and plain array responses
+        const teamsData = data.results || data;
+        console.log('Teams Component - Processed teams:', teamsData);
+        setTeams(Array.isArray(teamsData) ? teamsData : []);
+        setLoading(false);
+      })
+      .catch(error => {
+        console.error('Teams Component - Error fetching teams:', error);
+        setError(error.message);
+        setLoading(false);
+      });
+  }, []);
 
   // Render team card
-  const renderTeamCard = useCallback((team) => (
+  const renderTeamCard = (team) => (
     <div key={team.id} className="col-md-6 col-lg-4 mb-4">
       <div className="card h-100">
         <div className="card-body d-flex flex-column">
@@ -49,16 +67,30 @@ const Teams = () => {
         </div>
       </div>
     </div>
-  ), [t]);
+  );
 
-  // Loading state
   if (loading) {
-    return <LoadingSpinner message={t('loading')} />;
+    return (
+      <div className="container mt-4">
+        <div className="alert alert-info d-flex align-items-center" role="alert">
+          <div className="spinner-border spinner-border-sm me-3" role="status">
+            <span className="visually-hidden">{t('loading')}</span>
+          </div>
+          <div>{t('loading')}</div>
+        </div>
+      </div>
+    );
   }
 
-  // Error state
   if (error) {
-    return <ErrorAlert error={error} onRetry={refetch} />;
+    return (
+      <div className="container mt-4">
+        <div className="alert alert-danger" role="alert">
+          <h4 className="alert-heading">{t('error')}</h4>
+          <p className="mb-0">{error}</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -70,12 +102,11 @@ const Teams = () => {
         </span>
       </div>
       
-      {!teams || teams.length === 0 ? (
-        <EmptyState 
-          icon="🤝"
-          title={t('noTeamsFound')}
-          description={t('noTeamsFoundDesc')}
-        />
+      {teams.length === 0 ? (
+        <div className="alert alert-warning" role="alert">
+          <h5 className="alert-heading">{t('noTeamsFound')}</h5>
+          <p className="mb-0">{t('noTeamsFoundDesc')}</p>
+        </div>
       ) : (
         <div className="row">
           {teams.map(renderTeamCard)}
