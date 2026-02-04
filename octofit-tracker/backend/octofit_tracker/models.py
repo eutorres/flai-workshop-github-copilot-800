@@ -4,7 +4,7 @@ from django.db import models
 class User(models.Model):
     email = models.EmailField(unique=True)
     name = models.CharField(max_length=200)
-    team = models.CharField(max_length=100)
+    team = models.CharField(max_length=100, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:
